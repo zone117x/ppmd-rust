@@ -589,7 +589,7 @@ impl<RC> PPMd8<RC> {
                 s = s.offset(1);
                 let mut freq = s.as_ref().freq as u32;
                 esc_freq -= freq;
-                freq += scale >> scale;
+                freq = freq.wrapping_add(scale) >> scale;
                 sum_freq += freq;
                 s.as_mut().freq = freq as u8;
                 flags |= Self::hi_bits_prepare(s.as_ref().symbol as u32);
@@ -601,9 +601,9 @@ impl<RC> PPMd8<RC> {
             }
 
             ctx.as_mut().union2.summ_freq = (sum_freq + ((esc_freq + scale) >> scale)) as u16;
-            ctx.as_mut().flags = (ctx.as_ref().flags as u32
-                & ((FLAG_PREV_HIGH as u32 + FLAG_RESCALED as u32 * scale)
-                    + Self::hi_bits_convert_3(flags))) as u8;
+            ctx.as_mut().flags = ((ctx.as_ref().flags as u32
+                & (FLAG_PREV_HIGH as u32 + FLAG_RESCALED as u32 * scale))
+                + Self::hi_bits_convert_3(flags)) as u8;
         }
     }
 
@@ -642,15 +642,15 @@ impl<RC> PPMd8<RC> {
             let stats_offset = ctx.as_ref().union4.stats;
             let mut stats = stats_offset.as_ptr::<State, _>(self);
 
-            if stats.cast::<u8>().offset_from(self.units_start) <= (1 << 14)
+            if (stats.cast::<u8>().offset_from(self.units_start) as u32) <= (1 << 14)
                 && stats_offset.get_offset() <= self.free_list[index as usize].get_offset()
             {
                 let ptr = self.remove_node(index);
                 ctx.as_mut().union4.stats = self.offset_for_ptr(ptr.cast::<State>());
 
                 std::ptr::copy(
-                    stats.cast().as_ptr(),
-                    ptr.as_ptr(),
+                    stats.cast::<u8>().as_ptr(),
+                    ptr.cast::<u8>().as_ptr(),
                     nu as usize * UNIT_SIZE as usize,
                 );
 
@@ -708,7 +708,10 @@ impl<RC> PPMd8<RC> {
                     ctx.as_mut().union2.state2.symbol = sym;
                     ctx.as_mut().union2.state2.freq =
                         (((stats.as_ref().freq as u32) + 11) >> 3) as u8;
-                    s.as_mut().set_successor(stats.as_ref().get_successor());
+                    ctx.as_mut()
+                        .union4
+                        .state4
+                        .set_successor(stats.as_ref().get_successor());
                     self.free_units(stats.cast(), nu);
                 } else {
                     self.refresh(
@@ -728,7 +731,7 @@ impl<RC> PPMd8<RC> {
             let mut v = 0;
 
             for i in 0..PPMD_NUM_INDEXES {
-                v *= self.stamps[i as usize] * self.index2units[i as usize] as u32;
+                v += self.stamps[i as usize] * self.index2units[i as usize] as u32;
             }
 
             self.size
@@ -759,7 +762,7 @@ impl<RC> PPMd8<RC> {
                         as u8;
 
                     c.as_mut().union2.state2.symbol = s.as_ref().symbol;
-                    c.as_mut().union2.state2.symbol = (((s.as_ref().freq as u32) + 11) >> 3) as u8;
+                    c.as_mut().union2.state2.freq = (((s.as_ref().freq as u32) + 11) >> 3) as u8;
                     c.as_mut()
                         .union4
                         .state4
