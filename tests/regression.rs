@@ -109,3 +109,33 @@ fn ppmd8_cut_off_round_trip() {
 
     assert_eq!(decompressed, text);
 }
+
+#[test]
+fn ppmd7a_restarts_the_range_coder_and_keeps_the_model() {
+    use std::io::{Read, Write};
+
+    use ppmd_rust::{Ppmd7aDecoder, Ppmd7aEncoder};
+
+    let first = b"the first block of text, repeated words words words words";
+    let second = b"the second block, with the same words words words again";
+
+    let mut compressed = Vec::new();
+    let mut encoder = Ppmd7aEncoder::new(&mut compressed, 6, 1 << 20).unwrap();
+    encoder.write_all(first).unwrap();
+    encoder.restart_range_coder().unwrap();
+    let after_first = encoder.get_ref().len();
+    encoder.write_all(second).unwrap();
+    encoder.finish(false).unwrap();
+
+    let mut decoder = Ppmd7aDecoder::new(&compressed[..], 6, 1 << 20).unwrap();
+    let mut out = vec![0u8; first.len()];
+    decoder.read_exact(&mut out).unwrap();
+    assert_eq!(&out, first);
+    // The first coder's flushed bytes were consumed exactly; the second block
+    // starts where the encoder restarted.
+    assert_eq!(compressed.len() - decoder.get_ref().len(), after_first);
+    decoder.restart_range_coder().unwrap();
+    let mut out = vec![0u8; second.len()];
+    decoder.read_exact(&mut out).unwrap();
+    assert_eq!(&out, second);
+}

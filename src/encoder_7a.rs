@@ -48,6 +48,15 @@ impl<W: Write> Ppmd7aEncoder<W> {
         self.ppmd.into_inner()
     }
 
+    /// Flushes the coded stream and starts a new one while keeping the model.
+    ///
+    /// The counterpart of [`Ppmd7aDecoder::restart_range_coder`](crate::Ppmd7aDecoder::restart_range_coder):
+    /// RAR archives encode a file as several PPMd blocks, each with a fresh range
+    /// coder over the statistics of the blocks before it.
+    pub fn restart_range_coder(&mut self) -> std::io::Result<()> {
+        self.ppmd.restart_range_encoder()
+    }
+
     /// Finishes the encoding process.
     ///
     /// Adds an end marker to the data if `with_end_marker` is set to `true`.

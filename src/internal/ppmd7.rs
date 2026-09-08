@@ -1204,6 +1204,10 @@ impl<R: Read> PPMd7<RangeDecoder7a<R>> {
     pub(crate) fn range_decoder_code(&self) -> u32 {
         self.rc.code
     }
+
+    pub(crate) fn restart_range_decoder(&mut self) -> Result<(), Error> {
+        self.rc.restart()
+    }
 }
 
 impl<W: Write> PPMd7<RangeEncoder<W>> {
@@ -1285,5 +1289,9 @@ impl<W: Write> PPMd7<RangeEncoder7a<W>> {
 
     pub(crate) fn flush_range_encoder(&mut self) -> Result<(), std::io::Error> {
         self.rc.flush()
+    }
+
+    pub(crate) fn restart_range_encoder(&mut self) -> Result<(), std::io::Error> {
+        self.rc.restart()
     }
 }

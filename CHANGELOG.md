@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `Ppmd7aDecoder` and `Ppmd7aEncoder` for PPMd7 (PPMdH) with the carryless range coder (PPMd7a), as used
   by the `.pmd` files of the original PPMd program.
+- Added `restart_range_coder` to `Ppmd7aDecoder` and `Ppmd7aEncoder`, which starts a new coded stream
+  while keeping the model, as RAR archives do between the PPMd blocks of a file.
 
 ## 1.4.1 - 2026-09-01
 

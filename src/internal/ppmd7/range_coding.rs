@@ -164,16 +164,26 @@ impl<R: Read> RangeDecoder7a<R> {
             low: 0,
             reader,
         };
+        decoder.restart()?;
+        Ok(decoder)
+    }
+
+    /// Reads the first four bytes of a new coded stream from the reader and
+    /// resets the coder's state; the model is untouched.
+    pub(crate) fn restart(&mut self) -> crate::Result<()> {
+        self.range = 0xFFFFFFFF;
+        self.code = 0;
+        self.low = 0;
 
         for _ in 0..4 {
-            decoder.code = decoder.code << 8 | decoder.read_byte().map_err(Error::IoError)?;
+            self.code = self.code << 8 | self.read_byte().map_err(Error::IoError)?;
         }
 
-        if decoder.code == 0xFFFFFFFF {
+        if self.code == 0xFFFFFFFF {
             return Err(Error::RangeDecoderInitialization);
         }
 
-        Ok(decoder)
+        Ok(())
     }
 
     #[inline(always)]
@@ -414,6 +424,14 @@ impl<W: Write> RangeEncoder7a<W> {
             low: 0,
             writer,
         }
+    }
+
+    /// Flushes the coded stream and starts a new one; the model is untouched.
+    pub(crate) fn restart(&mut self) -> Result<(), std::io::Error> {
+        Ppmd7RangeEncoder::flush(self)?;
+        self.range = 0xFFFFFFFF;
+        self.low = 0;
+        Ok(())
     }
 
     #[inline(always)]

@@ -51,6 +51,19 @@ impl<R: Read> Ppmd7aDecoder<R> {
     pub fn into_inner(self) -> R {
         self.ppmd.into_inner()
     }
+
+    /// Restarts the range coder on a new coded stream while keeping the model.
+    ///
+    /// RAR archives encode a file as several PPMd blocks. Each block starts a
+    /// fresh range coder (four bytes of input are read here) but continues the
+    /// statistics of the block before it, so the decoder that read the previous
+    /// block has to read the next one too. Reads from the current reader; use
+    /// [`Ppmd7aDecoder::get_mut`] to point it at the new block first.
+    pub fn restart_range_coder(&mut self) -> crate::Result<()> {
+        self.ppmd.restart_range_decoder()?;
+        self.finished = false;
+        Ok(())
+    }
 }
 
 impl<R: Read> Read for Ppmd7aDecoder<R> {
